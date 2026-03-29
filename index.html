@@ -3,7 +3,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Tetris GOD</title>
 
 <style>
@@ -13,11 +13,11 @@ body{
   text-align:center;
   font-family:sans-serif;
   margin:0;
+  overflow:hidden; /* スクロール防止 */
+  touch-action: manipulation; /* ダブルタップ防止 */
 }
 
-h1{
-  margin-top:10px;
-}
+h1{ margin-top:10px; }
 
 .container{
   display:flex;
@@ -25,32 +25,21 @@ h1{
   align-items:center;
 }
 
-.game-area{
-  display:flex;
-  gap:10px;
-  margin-top:10px;
-}
-
-/* 重要：縦横比維持 */
+/* ゲームサイズ自動調整 */
 canvas{
   background:black;
   border-radius:10px;
   box-shadow:0 0 20px rgba(0,0,0,0.5);
 }
 
-/* スマホでも崩れない */
 #game{
-  width: min(90vw, 240px);
+  width: min(90vw, 300px);
   height: auto;
 }
 
 #next{
   width:80px;
   height:80px;
-}
-
-#side{
-  text-align:left;
 }
 
 button{
@@ -62,6 +51,7 @@ button{
   border:none;
   background:#fff2;
   color:white;
+  touch-action: manipulation;
 }
 </style>
 
@@ -72,18 +62,13 @@ button{
 <h1>🔥 Tetris GOD</h1>
 
 <div class="container">
-  <div class="game-area">
-    <canvas id="game" width="240" height="400"></canvas>
+  <canvas id="game" width="240" height="400"></canvas>
 
-```
-<div id="side">
-  <p>Score: <span id="score">0</span></p>
-  <p>Level: <span id="level">1</span></p>
-  <p>Next:</p>
-  <canvas id="next" width="80" height="80"></canvas>
-</div>
-```
-
+  <div>
+    <p>Score: <span id="score">0</span></p>
+    <p>Level: <span id="level">1</span></p>
+    <p>Next:</p>
+    <canvas id="next" width="80" height="80"></canvas>
   </div>
 
   <div>
@@ -105,6 +90,7 @@ const COL=12, ROW=20, BLOCK=20;
 let board = Array.from({length:ROW},()=>Array(COL).fill(0));
 let score=0, level=1;
 let dropInterval=500;
+let gameOver=false;
 
 const colors=[null,'cyan','blue','orange','yellow','green','purple','red'];
 
@@ -128,6 +114,12 @@ function newPiece(){
   piece = nextPiece || pieces[rand()];
   nextPiece = pieces[rand()];
   pos={x:4,y:0};
+
+  if(collide()){
+    gameOver=true;
+    alert("ゲームオーバー！");
+    location.reload();
+  }
 }
 
 function drawBlock(ctx,x,y,v,size=BLOCK){
@@ -140,7 +132,6 @@ function draw(){
 
   board.forEach((r,y)=>r.forEach((v,x)=>v && drawBlock(ctx,x,y,v)));
 
-  // ゴースト
   let ghostY=pos.y;
   while(!collide(0,ghostY-pos.y+1)) ghostY++;
   piece.forEach((r,y)=>r.forEach((v,x)=>{
@@ -154,7 +145,6 @@ function draw(){
   piece.forEach((r,y)=>r.forEach((v,x)=>v && drawBlock(ctx,x+pos.x,y+pos.y,v)));
 }
 
-/* ★ ここが修正ポイント（完全中央） */
 function drawNext(){
   nctx.clearRect(0,0,80,80);
   if(!nextPiece) return;
@@ -227,8 +217,6 @@ function clear(){
 
   score+=lines*100;
   level=1+Math.floor(score/500);
-
-  /* 速度下限つける */
   dropInterval=Math.max(100,500-(level*40));
 
   document.getElementById('score').innerText=score;
@@ -246,6 +234,8 @@ document.addEventListener('keydown',e=>{
 let last=0, counter=0;
 
 function update(t=0){
+  if(gameOver) return;
+
   const d=t-last;
   last=t;
   counter+=d;
