@@ -13,10 +13,15 @@ body{
   text-align:center;
   font-family:sans-serif;
   margin:0;
+  overflow:hidden;
   touch-action: manipulation;
 }
 
 h1{ margin:10px 0; }
+
+#wrapper{
+  transform-origin: top center;
+}
 
 .container{
   display:flex;
@@ -24,14 +29,12 @@ h1{ margin:10px 0; }
   align-items:center;
 }
 
-/* ===== レイアウト ===== */
 .game-area{
   display:flex;
   gap:20px;
   align-items:flex-start;
 }
 
-/* ===== キャンバス ===== */
 canvas{
   background:black;
   border-radius:10px;
@@ -48,11 +51,6 @@ canvas{
   height:80px;
 }
 
-/* ===== ボタン ===== */
-.controls{
-  margin-top:15px;
-}
-
 button{
   width:60px;
   height:60px;
@@ -64,29 +62,8 @@ button{
   color:white;
 }
 
-/* ===== スマホ最適化 ===== */
-@media (max-width:600px){
-
-  .game-area{
-    flex-direction:column;
-    align-items:center;
-  }
-
-  #game{
-    width:90vw;
-    height:auto;
-  }
-
-  #next{
-    width:60px;
-    height:60px;
-  }
-
-  button{
-    width:70px;
-    height:70px;
-    font-size:24px;
-  }
+.controls{
+  margin-top:10px;
 }
 </style>
 
@@ -96,27 +73,29 @@ button{
 
 <h1>🔥 Tetris GOD</h1>
 
-<div class="container">
-  <div class="game-area">
-    <canvas id="game" width="240" height="400"></canvas>
+<div id="wrapper">
+  <div class="container">
+    <div class="game-area">
+      <canvas id="game" width="240" height="400"></canvas>
 
 ```
-<div id="side">
-  <p>Score: <span id="score">0</span></p>
-  <p>Level: <span id="level">1</span></p>
-  <p>Next:</p>
-  <canvas id="next" width="80" height="80"></canvas>
+  <div id="side">
+    <p>Score: <span id="score">0</span></p>
+    <p>Level: <span id="level">1</span></p>
+    <p>Next:</p>
+    <canvas id="next" width="80" height="80"></canvas>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="move(-1)">←</button>
+  <button onclick="rotate()">⟳</button>
+  <button onclick="move(1)">→</button><br>
+  <button onclick="drop()">↓</button>
+  <button onclick="hardDrop()">⬇⬇</button>
 </div>
 ```
 
-  </div>
-
-  <div class="controls">
-    <button onclick="move(-1)">←</button>
-    <button onclick="rotate()">⟳</button>
-    <button onclick="move(1)">→</button><br>
-    <button onclick="drop()">↓</button>
-    <button onclick="hardDrop()">⬇⬇</button>
   </div>
 </div>
 
@@ -157,7 +136,7 @@ function newPiece(){
 
   if(collide()){
     gameOver=true;
-    alert("ゲームオーバー");
+    alert("ゲームオーバー！");
     location.reload();
   }
 }
@@ -200,7 +179,9 @@ function drawNext(){
   nextPiece.forEach((r,y)=>{
     r.forEach((v,x)=>{
       if(v){
-        drawBlock(nctx,x+offsetX,y+offsetY,v,size);
+        ctx.fillStyle=colors[v];
+        nctx.fillStyle=colors[v];
+        nctx.fillRect((x+offsetX)*size,(y+offsetY)*size,size,size);
       }
     });
   });
@@ -263,6 +244,19 @@ function clear(){
   document.getElementById('score').innerText=score;
   document.getElementById('level').innerText=level;
 }
+
+/* スケール調整 */
+function adjustScale(){
+  const wrapper=document.getElementById('wrapper');
+  const vh=window.innerHeight;
+  const contentHeight=wrapper.scrollHeight;
+
+  const scale=Math.min(1, vh/contentHeight);
+  wrapper.style.transform=`scale(${scale})`;
+}
+
+window.addEventListener('load', adjustScale);
+window.addEventListener('resize', adjustScale);
 
 document.addEventListener('keydown',e=>{
   if(e.key==="ArrowLeft") move(-1);
