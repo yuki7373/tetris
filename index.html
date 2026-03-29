@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Tetris</title>
+<style>
+  body {
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  canvas {
+    background: black;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>テトリス</h1>
+<p>← → : 移動 / ↓ : 早く落とす / ↑ : 回転</p>
+<canvas id="game" width="240" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const COL = 12;
+const ROW = 20;
+const BLOCK = 20;
+
+let board = Array.from({length: ROW}, () => Array(COL).fill(0));
+
+const colors = [
+  null,
+  'cyan','blue','orange','yellow','green','purple','red'
+];
+
+const pieces = [
+  [],
+  [[1,1,1,1]],
+  [[2,0,0],[2,2,2]],
+  [[0,0,3],[3,3,3]],
+  [[4,4],[4,4]],
+  [[0,5,5],[5,5,0]],
+  [[0,6,0],[6,6,6]],
+  [[7,7,0],[0,7,7]]
+];
+
+let piece = null;
+let pos = {x:0, y:0};
+
+function newPiece(){
+  const id = Math.floor(Math.random()*7)+1;
+  piece = pieces[id];
+  pos.x = 4;
+  pos.y = 0;
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  board.forEach((row,y)=>{
+    row.forEach((value,x)=>{
+      if(value){
+        ctx.fillStyle = colors[value];
+        ctx.fillRect(x*BLOCK,y*BLOCK,BLOCK,BLOCK);
+      }
+    });
+  });
+
+  piece.forEach((row,y)=>{
+    row.forEach((value,x)=>{
+      if(value){
+        ctx.fillStyle = colors[value];
+        ctx.fillRect((x+pos.x)*BLOCK,(y+pos.y)*BLOCK,BLOCK,BLOCK);
+      }
+    });
+  });
+}
+
+function collide(){
+  return piece.some((row,y)=>{
+    return row.some((value,x)=>{
+      return value &&
+        (board[y+pos.y]?.[x+pos.x] !== 0);
+    });
+  });
+}
+
+function merge(){
+  piece.forEach((row,y)=>{
+    row.forEach((value,x)=>{
+      if(value){
+        board[y+pos.y][x+pos.x] = value;
+      }
+    });
+  });
+}
+
+function rotate(){
+  const rotated = piece[0].map((_,i)=>piece.map(r=>r[i]).reverse());
+  const prev = piece;
+  piece = rotated;
+  if(collide()) piece = prev;
+}
+
+function drop(){
+  pos.y++;
+  if(collide()){
+    pos.y--;
+    merge();
+    clearLines();
+    newPiece();
+  }
+}
+
+function move(dir){
+  pos.x += dir;
+  if(collide()) pos.x -= dir;
+}
+
+function clearLines(){
+  board = board.filter(row=>row.some(v=>v===0));
+  while(board.length < ROW){
+    board.unshift(Array(COL).fill(0));
+  }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowLeft') move(-1);
+  if(e.key === 'ArrowRight') move(1);
+  if(e.key === 'ArrowDown') drop();
+  if(e.key === 'ArrowUp') rotate();
+});
+
+function loop(){
+  drop();
+  draw();
+}
+
+newPiece();
+setInterval(loop,500);
+</script>
+
+</body>
+</html>
