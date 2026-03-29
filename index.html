@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -30,10 +31,22 @@ h1{
   margin-top:10px;
 }
 
+/* 重要：縦横比維持 */
 canvas{
   background:black;
   border-radius:10px;
   box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
+
+/* スマホでも崩れない */
+#game{
+  width: min(90vw, 240px);
+  height: auto;
+}
+
+#next{
+  width:80px;
+  height:80px;
 }
 
 #side{
@@ -50,14 +63,8 @@ button{
   background:#fff2;
   color:white;
 }
-
-@media (max-width:600px){
-  canvas{
-    width:90vw;
-    height:auto;
-  }
-}
 </style>
+
 </head>
 
 <body>
@@ -68,14 +75,15 @@ button{
   <div class="game-area">
     <canvas id="game" width="240" height="400"></canvas>
 
-    <div id="side">
-      <p>Score: <span id="score">0</span></p>
-      <p>Level: <span id="level">1</span></p>
-      <p>Next:</p>
-      <canvas id="next" width="80" height="80"></canvas>
-      <p>Hold:</p>
-      <canvas id="hold" width="80" height="80"></canvas>
-    </div>
+```
+<div id="side">
+  <p>Score: <span id="score">0</span></p>
+  <p>Level: <span id="level">1</span></p>
+  <p>Next:</p>
+  <canvas id="next" width="80" height="80"></canvas>
+</div>
+```
+
   </div>
 
   <div>
@@ -91,7 +99,6 @@ button{
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const nctx = document.getElementById('next').getContext('2d');
-const hctx = document.getElementById('hold').getContext('2d');
 
 const COL=12, ROW=20, BLOCK=20;
 
@@ -112,18 +119,16 @@ const pieces=[
 [[7,7,0],[0,7,7]]
 ];
 
-let piece, nextPiece, holdPiece=null;
-let canHold=true;
+let piece, nextPiece;
 let pos={x:0,y:0};
+
+function rand(){ return Math.floor(Math.random()*7)+1; }
 
 function newPiece(){
   piece = nextPiece || pieces[rand()];
   nextPiece = pieces[rand()];
   pos={x:4,y:0};
-  canHold=true;
 }
-
-function rand(){ return Math.floor(Math.random()*7)+1; }
 
 function drawBlock(ctx,x,y,v,size=BLOCK){
   ctx.fillStyle=colors[v];
@@ -149,9 +154,25 @@ function draw(){
   piece.forEach((r,y)=>r.forEach((v,x)=>v && drawBlock(ctx,x+pos.x,y+pos.y,v)));
 }
 
-function drawMini(ctx,p){
-  ctx.clearRect(0,0,80,80);
-  p.forEach((r,y)=>r.forEach((v,x)=>v && drawBlock(ctx,x,y,v,20)));
+/* ★ ここが修正ポイント（完全中央） */
+function drawNext(){
+  nctx.clearRect(0,0,80,80);
+  if(!nextPiece) return;
+
+  const size=20;
+  const w=nextPiece[0].length;
+  const h=nextPiece.length;
+
+  const offsetX=(4-w)/2;
+  const offsetY=(4-h)/2;
+
+  nextPiece.forEach((r,y)=>{
+    r.forEach((v,x)=>{
+      if(v){
+        drawBlock(nctx,x+offsetX,y+offsetY,v,size);
+      }
+    });
+  });
 }
 
 function collide(dx=0,dy=0){
@@ -193,24 +214,22 @@ function hardDrop(){
   drop();
 }
 
-function hold(){
-  if(!canHold) return;
-  [holdPiece,piece]=[piece,holdPiece||pieces[rand()]];
-  pos={x:4,y:0};
-  canHold=false;
-}
-
 function clear(){
   let lines=0;
   board=board.filter(r=>{
     if(r.every(v=>v!==0)){ lines++; return false;}
     return true;
   });
-  while(board.length<ROW) board.unshift(Array(COL).fill(0));
+
+  while(board.length<ROW){
+    board.unshift(Array(COL).fill(0));
+  }
 
   score+=lines*100;
   level=1+Math.floor(score/500);
-  dropInterval=500-(level*40);
+
+  /* 速度下限つける */
+  dropInterval=Math.max(100,500-(level*40));
 
   document.getElementById('score').innerText=score;
   document.getElementById('level').innerText=level;
@@ -222,7 +241,6 @@ document.addEventListener('keydown',e=>{
   if(e.key==="ArrowDown") drop();
   if(e.key==="ArrowUp") rotate();
   if(e.key===" ") hardDrop();
-  if(e.key==="c") hold();
 });
 
 let last=0, counter=0;
@@ -238,8 +256,7 @@ function update(t=0){
   }
 
   draw();
-  drawMini(nctx,nextPiece);
-  if(holdPiece) drawMini(hctx,holdPiece);
+  drawNext();
 
   requestAnimationFrame(update);
 }
