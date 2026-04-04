@@ -81,6 +81,7 @@ button{
 ```
   <div id="side">
     <p>Score: <span id="score">0</span></p>
+    <p>High Score: <span id="highscore">0</span></p>
     <p>Level: <span id="level">1</span></p>
     <p>Next:</p>
     <canvas id="next" width="80" height="80"></canvas>
@@ -93,6 +94,7 @@ button{
   <button onclick="move(1)">→</button><br>
   <button onclick="drop()">↓</button>
   <button onclick="hardDrop()">⬇⬇</button>
+  <button onclick="togglePause()">⏸</button>
 </div>
 ```
 
@@ -110,6 +112,11 @@ let board = Array.from({length:ROW},()=>Array(COL).fill(0));
 let score=0, level=1;
 let dropInterval=500;
 let gameOver=false;
+let paused=false;
+
+// ハイスコア
+let highScore = localStorage.getItem("tetrisHighScore") || 0;
+document.getElementById('highscore').innerText = highScore;
 
 const colors=[null,'cyan','blue','orange','yellow','green','purple','red'];
 
@@ -179,7 +186,6 @@ function drawNext(){
   nextPiece.forEach((r,y)=>{
     r.forEach((v,x)=>{
       if(v){
-        ctx.fillStyle=colors[v];
         nctx.fillStyle=colors[v];
         nctx.fillRect((x+offsetX)*size,(y+offsetY)*size,size,size);
       }
@@ -243,6 +249,13 @@ function clear(){
 
   document.getElementById('score').innerText=score;
   document.getElementById('level').innerText=level;
+
+  // ハイスコア更新
+  if(score > highScore){
+    highScore = score;
+    localStorage.setItem("tetrisHighScore", highScore);
+    document.getElementById('highscore').innerText = highScore;
+  }
 }
 
 /* スケール調整 */
@@ -250,7 +263,6 @@ function adjustScale(){
   const wrapper=document.getElementById('wrapper');
   const vh=window.innerHeight;
   const contentHeight=wrapper.scrollHeight;
-
   const scale=Math.min(1, vh/contentHeight);
   wrapper.style.transform=`scale(${scale})`;
 }
@@ -264,12 +276,22 @@ document.addEventListener('keydown',e=>{
   if(e.key==="ArrowDown") drop();
   if(e.key==="ArrowUp") rotate();
   if(e.key===" ") hardDrop();
+  if(e.key==="p") paused = !paused;
 });
+
+function togglePause(){
+  paused = !paused;
+}
 
 let last=0, counter=0;
 
 function update(t=0){
   if(gameOver) return;
+
+  if(paused){
+    requestAnimationFrame(update);
+    return;
+  }
 
   const d=t-last;
   last=t;
