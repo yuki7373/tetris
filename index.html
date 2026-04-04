@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Tetris GOD</title>
+<title>テトリス</title>
 
 <style>
 body{
@@ -21,6 +21,8 @@ h1{ margin:10px 0; }
 
 #wrapper{
   transform-origin: top center;
+  display:flex;
+  justify-content:center;
 }
 
 .container{
@@ -33,6 +35,7 @@ h1{ margin:10px 0; }
   display:flex;
   gap:20px;
   align-items:flex-start;
+  justify-content:center;
 }
 
 canvas{
@@ -71,7 +74,7 @@ button{
 
 <body>
 
-<h1>🔥 Tetris GOD</h1>
+<h1>テトリス</h1>
 
 <div id="wrapper">
   <div class="container">
@@ -80,11 +83,11 @@ button{
 
 ```
   <div id="side">
+    <p>Next:</p>
+    <canvas id="next" width="80" height="80"></canvas>
     <p>Score: <span id="score">0</span></p>
     <p>High Score: <span id="highscore">0</span></p>
     <p>Level: <span id="level">1</span></p>
-    <p>Next:</p>
-    <canvas id="next" width="80" height="80"></canvas>
   </div>
 </div>
 
@@ -94,7 +97,7 @@ button{
   <button onclick="move(1)">→</button><br>
   <button onclick="drop()">↓</button>
   <button onclick="hardDrop()">⬇⬇</button>
-  <button onclick="togglePause()">⏸</button>
+  <button id="pauseBtn" onclick="togglePause()">⏸</button>
 </div>
 ```
 
@@ -105,6 +108,7 @@ button{
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const nctx = document.getElementById('next').getContext('2d');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const COL=12, ROW=20, BLOCK=20;
 
@@ -206,6 +210,7 @@ function merge(){
 }
 
 function rotate(){
+  if(paused) return;
   const r = piece[0].map((_,i)=>piece.map(r=>r[i]).reverse());
   const prev=piece;
   piece=r;
@@ -213,11 +218,13 @@ function rotate(){
 }
 
 function move(d){
+  if(paused) return;
   pos.x+=d;
   if(collide()) pos.x-=d;
 }
 
 function drop(){
+  if(paused) return;
   pos.y++;
   if(collide()){
     pos.y--;
@@ -228,6 +235,7 @@ function drop(){
 }
 
 function hardDrop(){
+  if(paused) return;
   while(!collide(0,1)) pos.y++;
   drop();
 }
@@ -250,12 +258,16 @@ function clear(){
   document.getElementById('score').innerText=score;
   document.getElementById('level').innerText=level;
 
-  // ハイスコア更新
   if(score > highScore){
     highScore = score;
     localStorage.setItem("tetrisHighScore", highScore);
     document.getElementById('highscore').innerText = highScore;
   }
+}
+
+function togglePause(){
+  paused = !paused;
+  pauseBtn.innerText = paused ? "▶" : "⏸";
 }
 
 /* スケール調整 */
@@ -276,12 +288,8 @@ document.addEventListener('keydown',e=>{
   if(e.key==="ArrowDown") drop();
   if(e.key==="ArrowUp") rotate();
   if(e.key===" ") hardDrop();
-  if(e.key==="p") paused = !paused;
+  if(e.key==="p") togglePause();
 });
-
-function togglePause(){
-  paused = !paused;
-}
 
 let last=0, counter=0;
 
@@ -289,6 +297,7 @@ function update(t=0){
   if(gameOver) return;
 
   if(paused){
+    last = t; // ←ここ重要（暴走防止）
     requestAnimationFrame(update);
     return;
   }
